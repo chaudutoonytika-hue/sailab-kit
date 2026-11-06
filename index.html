@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0E3B43">
+<title>Sailab Kit: Offline First Aid</title>
+<style>
+:root{--ink:#10272B;--paper:#EDF2F0;--card:#fff;--water:#0E3B43;--line:#C5D3D0;--alert:#B3261E;--muted:#4A6064;--fs:18px}
+@media (prefers-color-scheme:dark){:root{--ink:#E6EFED;--paper:#0B1A1D;--card:#12282C;--water:#06242A;--line:#2A4448;--muted:#9DB4B8}}
+*{box-sizing:border-box}
+html{font-size:var(--fs)}
+body{margin:0;background:var(--paper);color:var(--ink);font:1rem/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:4.5rem}
+header{background:var(--water);color:#fff;padding:.9rem 1rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+header h1{font:700 1.5rem/1 Georgia,"Times New Roman",serif;margin:0;flex:1;letter-spacing:.01em}
+.pill{font-size:.75rem;border:1px solid #ffffff80;border-radius:99px;padding:.15rem .6rem}
+header button{background:transparent;color:#fff;border:1px solid #ffffff80;border-radius:6px;font:inherit;font-size:.8rem;padding:.2rem .55rem;cursor:pointer}
+main{max-width:42rem;margin:0 auto;padding:1rem}
+input[type=search]{width:100%;font:inherit;padding:.8rem 1rem;border:2px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+button,a,input{outline-offset:3px}
+:focus-visible{outline:3px solid #E8A33D}
+.lead{color:var(--muted);margin:.8rem 0 1rem}
+.topic{display:block;width:100%;text-align:left;font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:10px;padding:.9rem 1rem;margin:0 0 .7rem;cursor:pointer}
+.topic b{display:block;font:700 1.2rem/1.25 Georgia,serif}
+.topic span{color:var(--muted);font-size:.85rem}
+.back{background:none;border:0;color:var(--ink);font:inherit;text-decoration:underline;cursor:pointer;padding:.2rem 0;margin-right:1rem}
+h2{font:700 1.55rem/1.25 Georgia,serif;margin:1rem 0 .8rem}
+.opt{display:block;width:100%;text-align:left;font:inherit;font-weight:600;background:var(--card);color:var(--ink);border:2px solid var(--water);border-radius:10px;padding:1rem;margin:0 0 .7rem;cursor:pointer}
+.opt:active{background:var(--line)}
+.call{display:block;background:var(--alert);color:#fff;text-decoration:none;font-weight:700;text-align:center;border-radius:10px;padding:.9rem;margin:0 0 1rem;font-size:1.15rem}
+ol{padding-left:1.4rem;margin:0 0 1rem}
+li{margin:0 0 .7rem;padding-left:.2rem}
+li::marker{font-weight:700;color:var(--water)}
+@media (prefers-color-scheme:dark){li::marker{color:#7FC4CE}}
+.avoid{border:2px solid var(--alert);border-radius:10px;padding:.8rem 1rem;margin:0 0 1rem;background:var(--card)}
+.avoid b{color:var(--alert)}
+.avoid ul{margin:.4rem 0 0;padding-left:1.2rem}
+.note{background:var(--card);border-left:6px solid var(--line);padding:.7rem 1rem;border-radius:6px;margin:0 0 1rem}
+.none{color:var(--muted)}
+footer{max-width:42rem;margin:0 auto;padding:0 1rem 1rem;font-size:.8rem;color:var(--muted)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--alert);z-index:5}
+nav a{flex:1;color:#fff;text-align:center;text-decoration:none;font-weight:700;padding:.85rem .2rem;border-right:1px solid #ffffff55;font-size:.95rem}
+nav a:last-child{border:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sailab Kit</h1>
+  <span class="pill" id="st">Checking…</span>
+  <button id="sm" aria-label="Smaller text">A−</button><button id="lg" aria-label="Larger text">A+</button>
+</header>
+<main id="app"></main>
+<footer>First-aid guidance for emergencies when there is no signal. It does not replace a doctor or trained responders. Always call for help first if you can.</footer>
+<nav aria-label="Emergency numbers"><a href="tel:1122">Rescue 1122</a><a href="tel:115">Edhi 115</a><a href="tel:15">Police 15</a></nav>
+
+<script>
+const T=[
+{id:'cpr',n:'Not breathing / CPR',d:'Unresponsive, collapsed, drowned',c:'#B3261E',s:'c1',k:'cardiac arrest heart attack unresponsive collapse faint unconscious drowning drowned pulse breathing resuscitation aed'},
+{id:'snake',n:'Snakebite',d:'Cobra, krait, viper, unknown snake',c:'#5E7A1E',s:'s1',k:'snake bite venom cobra krait viper antivenom sting reptile'},
+{id:'burn',n:'Burns',d:'Fire, hot liquid, chemical, electric',c:'#C25A12',s:'b1',k:'burn scald fire hot water oil steam chemical electric shock blister'},
+{id:'heat',n:'Heatstroke',d:'Heat exhaustion, collapse in the heat',c:'#B07A00',s:'h1',k:'heat stroke sunstroke hot sun dehydration cramps dizzy exhaustion fever temperature'},
+{id:'bleed',n:'Severe bleeding',d:'Deep cuts, injuries, debris wounds',c:'#7A1F3D',s:'x1',k:'bleeding blood cut wound injury tourniquet pressure bandage laceration'}
+];
+const N={
+c1:{t:'cpr',q:'Shout and tap their shoulders. Do they respond?',o:[['Yes: they talk, move or open their eyes','c_ok'],['No response','c2']]},
+c_ok:{t:'cpr',h:'They are responsive',d:['Keep them still and comfortable where they are.','Ask what happened and check for injuries.','Call 1122 if they are confused, in pain or getting worse.','Stay with them and recheck every few minutes.']},
+c2:{t:'cpr',q:'Look at the chest for up to 10 seconds. Are they breathing normally? Gasping or snoring is not normal breathing.',o:[['Breathing normally','c_rec'],['Not breathing, or only gasping','c3']]},
+c_rec:{t:'cpr',h:'Recovery position',call:1,d:['Kneel beside them. Place the arm nearest you at a right angle to their body.','Bring the far hand to their cheek and bend the far knee up.','Roll them towards you onto their side. Tilt the head back a little to keep the airway open.','Call 1122. Keep checking their breathing. If it stops, start CPR.'],g:[['Breathing stopped: start CPR','c3']]},
+c3:{t:'cpr',h:'Start CPR now',call:1,d:['Shout for help. Ask someone to call 1122 and bring an AED. If alone, call on speaker, then start.','Lay them on their back on a firm, flat surface. Kneel beside their chest.','Put the heel of one hand on the centre of the chest, the other hand on top, arms straight.','Push hard and fast: 5 to 6 cm deep, 100 to 120 pushes a minute. Let the chest rise fully each time.','If trained and willing: after every 30 pushes give 2 breaths (tilt head, lift chin, pinch nose, blow for 1 second each). If not, keep pushing without stopping.','If an AED arrives, switch it on and follow its voice prompts.','Do not stop until help takes over, they start breathing, or you cannot go on.'],n:'Children: push about one third of the chest depth, with one or two hands. Babies: two fingers, about 4 cm. Drowned person or child: breaths matter. If trained, start with 5 breaths, then 30 pushes to 2 breaths.'},
+s1:{t:'snake',q:'Is the person unconscious, struggling to breathe, or is their face or throat swelling?',o:[['Yes','s_crit'],['No','s2']]},
+s_crit:{t:'snake',h:'Life-threatening bite',call:1,d:['Call 1122 now.','Lay them flat. Keep the bitten limb still.','If they are not breathing normally, start CPR.','Get to a hospital with antivenom as fast as possible. Give no food or drink.'],g:[['Open CPR steps','c2']]},
+s2:{t:'snake',h:'Snakebite: what to do',call:1,d:['Move away from the snake. Do not chase, kill or catch it.','Keep the person calm and still. Movement spreads venom faster. Carry them instead of letting them walk.','Take off rings, watches and tight clothes near the bite before swelling starts.','Hold the bitten limb still, about level with the heart. A loose splint helps.','Call 1122 or arrange transport to a hospital with antivenom. Go even if they feel fine.','Note the time of the bite. Mark the edge of any swelling with a pen and write the time beside it.','Remember the snake\'s colour and size, or take a photo from a safe distance.'],a:['Cutting the wound or sucking out venom','Tourniquets or tight bandages','Ice, herbs, mud or home remedies','Alcohol, aspirin or ibuprofen'],n:'Floods push snakes onto roofs and dry ground. Shake out shoes and bedding before use.'},
+b1:{t:'burn',q:'What caused the burn?',o:[['Fire, hot water, steam or hot oil','b2'],['Chemical','b_ch'],['Electricity','b_el']]},
+b_el:{t:'burn',h:'Electrical burn',call:1,d:['Do not touch them until the power is off. Switch off at the main, or push them away with dry wood or plastic. In floods, stay out of any water near live wires.','Call 1122. Every electrical burn needs a hospital check.','Check breathing. Start CPR if they are not breathing normally.','Cover burns loosely with a clean, dry cloth.'],g:[['Open CPR steps','c2']]},
+b_ch:{t:'burn',h:'Chemical burn',call:1,d:['Avoid touching the chemical yourself. Use gloves or a cloth.','Remove contaminated clothing. Brush off dry powder first.','Rinse the skin with plenty of running water for at least 20 minutes.','Eyes: rinse for 20 minutes with the eye open, water running away from the other eye.','Get medical help.']},
+b2:{t:'burn',q:'Is the burn bigger than the person\'s palm, deep, white or charred, or on the face, hands, feet, groin or a joint? Is the person a child or an older adult?',o:[['Yes, or I am not sure','b_maj'],['No: small, red or blistered','b_min']]},
+b_maj:{t:'burn',h:'Serious burn',call:1,d:['If clothes are on fire: stop, drop and roll, or smother the flames with a blanket.','Cool the burn under cool running water for 20 minutes.','Remove rings, watches and loose clothes near the burn. Leave anything stuck to the skin.','Cover loosely with clean cling film or a clean, non-fluffy cloth.','Call 1122 or go to a hospital. Keep the person warm.'],a:['Ice or very cold water','Butter, oil, toothpaste or creams','Popping blisters']},
+b_min:{t:'burn',h:'Minor burn',d:['Cool under cool running water for 20 minutes.','Remove rings and watches near the burn before it swells.','Cover loosely with a clean, non-stick dressing or cling film.','Paracetamol can ease the pain.','See a doctor if you see pus, spreading redness or fever.'],a:['Ice or very cold water','Butter, oil, toothpaste or creams','Popping blisters']},
+h1:{t:'heat',q:'Is the person confused, very drowsy or having a fit? Is their skin hot and dry, or very hot to touch?',o:[['Yes to any of these','h_st'],['No: sweating, dizzy, cramps, headache','h_ex']]},
+h_st:{t:'heat',h:'Heatstroke: emergency',call:1,d:['Call 1122 now.','Move them to shade or a cool room and lay them down.','Remove extra clothing. Soak the skin with water and fan them hard.','Put cold wet cloths or ice packs on the neck, armpits and groin.','If you can, put them in cold water up to the neck. Watch their face the whole time.','If fully alert and able to swallow, give small sips of water. Not if drowsy or vomiting.','Keep cooling until help arrives. If they stop breathing, start CPR.'],a:['Leaving them alone','Giving paracetamol or aspirin. They do not help'],g:[['Open CPR steps','c2']]},
+h_ex:{t:'heat',h:'Heat exhaustion',d:['Rest in shade or a cool place. Lie down and raise the legs a little.','Loosen clothing. Cool the skin with wet cloths and a fan.','Sip water or ORS slowly.','If they are no better in 30 minutes, or become confused, treat it as heatstroke and call 1122.'],g:[['It is getting worse: heatstroke steps','h_st']]},
+x1:{t:'bleed',h:'Severe bleeding',call:1,d:['Call 1122.','Press firmly on the wound with a clean cloth. Use your hand if you have nothing else.','Keep pressing without lifting. If blood soaks through, add more cloth on top.','Once bleeding slows, wrap a firm bandage over the pad.','Lay them down and keep them warm. Raise the legs if there is no leg injury.','Last resort for a limb that keeps bleeding heavily: tie a wide band firmly above the wound, tighten until the bleeding stops, and note the time.']}
+};
+</script>
+<script>
+const app=document.getElementById('app'),st=document.getElementById('st');
+let hist=[],fs=18;
+const idx=T.map(t=>(t.n+' '+t.d+' '+t.k+' '+Object.values(N).filter(x=>x.t===t.id).map(x=>(x.q||x.h)+' '+(x.d||[]).join(' ')+' '+(x.n||'')).join(' ')).toLowerCase());
+function home(q){
+  hist=[];q=(q||'').trim().toLowerCase();
+  const w=q.split(/\s+/).filter(Boolean);
+  const list=T.filter((t,i)=>w.every(x=>idx[i].includes(x)));
+  app.innerHTML='<input type="search" id="q" placeholder="Search: snake, burn, not breathing…" aria-label="Search first aid topics" value="">'+
+   (q?'':'<p class="lead">Tap what is happening. You will be guided step by step.</p>')+
+   (list.length?list.map(t=>`<button class="topic" style="--c:${t.c}" data-go="${t.s}"><b>${t.n}</b><span>${t.d}</span></button>`).join(''):'<p class="none">Nothing matches. Try a simpler word, or call 1122.</p>');
+  const i=document.getElementById('q');i.value=q;
+  if(q){i.focus();i.setSelectionRange(q.length,q.length)}
+  i.addEventListener('input',e=>home(e.target.value));
+}
+function show(id){
+  const x=N[id];let h='<button class="back" data-back>Back</button><button class="back" data-home>All topics</button>';
+  if(x.q){h+=`<h2>${x.q}</h2>`+x.o.map(o=>`<button class="opt" data-go="${o[1]}">${o[0]}</button>`).join('')}
+  else{
+    h+=`<h2>${x.h}</h2>`;
+    if(x.call)h+='<a class="call" href="tel:1122">Call Rescue 1122</a>';
+    h+='<ol>'+x.d.map(s=>`<li>${s}</li>`).join('')+'</ol>';
+    if(x.a)h+='<div class="avoid"><b>Do not</b><ul>'+x.a.map(s=>`<li>${s}</li>`).join('')+'</ul></div>';
+    if(x.n)h+=`<p class="note">${x.n}</p>`;
+    if(x.g)h+=x.g.map(g=>`<button class="opt" data-go="${g[1]}">${g[0]}</button>`).join('');
+  }
+  app.innerHTML=h;window.scrollTo(0,0);
+}
+app.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.go){hist.push(b.dataset.go);show(b.dataset.go)}
+  else if('back' in b.dataset){hist.pop();hist.length?show(hist[hist.length-1]):home()}
+  else if('home' in b.dataset)home();
+});
+function size(d){fs=Math.min(26,Math.max(15,fs+d));document.documentElement.style.setProperty('--fs',fs+'px')}
+document.getElementById('sm').onclick=()=>size(-2);
+document.getElementById('lg').onclick=()=>size(2);
+function net(){st.textContent=navigator.onLine?'Online':'Offline: still works'}
+addEventListener('online',net);addEventListener('offline',net);net();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+home();
+</script>
+</body>
+</html>
